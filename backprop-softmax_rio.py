@@ -23,6 +23,14 @@ def relu_d(x):
     squarer = lambda x: 1 if x>0 else 0
     vfunc = np.vectorize(squarer)
     return vfunc(x)
+def leaky_relu(x):
+    squarer = lambda x: max(0.01x, x)
+    vfunc = np.vectorize(squarer)
+    return vfunc(x)
+def leaky_relu_d(x):
+    squarer = lambda x: 1 if x>0 else 0.01
+    vfunc = np.vectorize(squarer)
+    return vfunc(x)
        
 class BackPropagation:
 
@@ -58,8 +66,8 @@ class BackPropagation:
         self.nabla_C_out   = np.zeros(network_shape[-1])
 
         # Choose activation function
-        self.phi           = relu
-        self.phi_d         = relu_d
+        self.phi           = leaky_relu
+        self.phi_d         = leaky_relu_d
         
         # Store activations over the batch for plotting
         self.batch_a       = [np.zeros(m) for m in network_shape]
@@ -103,7 +111,7 @@ class BackPropagation:
         # note that dz^l_j/dw^l_j = input of perivous layer which multiply that w (a^l-1_j)
         # dz^l_j/db^l_j always = 1, thus dc/db = dc/dz
         label = np.argmax(y)
-        prob = self.softmax(x[self.L-1])
+        prob = self.softmax(self.a[self.L-1])
         sigma = lambda a,b: 1 if a==b else 0 
         for i in range(self.L-1,0,-1): #loop layer
             for j in range(self.delta[i].shape[0]): #loop j th element
@@ -113,9 +121,9 @@ class BackPropagation:
                     self.delta[i][j] = np.sum(self.phi_d(self.z[i])*((self.w[i+1].T)*self.delta[i+1]).T)
                     #dc/dz,= next's layer's local grad*w to this layer*
                      #activation derivative(input of perivious layer)   
-                self.db[i][j]=np.sum(self.delta[i])#dc/db, = dc/dz
+                self.db[i][j]+=np.sum(self.delta[i])#dc/db, = dc/dz
                 for k in range(self.dw[i].shape[1]): #loop j th element's k th input
-                    self.dw[i][j][k]=np.sum(self.delta[i]*x[i-1][k])#dc/dw, = dc/dz * a^l-1
+                    self.dw[i][j][k]+=np.sum(self.delta[i]*self.a[i-1][k])#dc/dw, = dc/dz * a^l-1
         
 
     # Return predicted image class for input x
@@ -136,7 +144,7 @@ class BackPropagation:
     
     def sgd(self,
             batch_size=50,
-            epsilon=0.01,
+            epsilon=0.0001,
             epochs=5):
 
         """ Mini-batch gradient descent on training data.
@@ -179,6 +187,8 @@ class BackPropagation:
                     self.db[l].fill(0.0)
                     self.delta[l].fill(0.0)
                     self.dw[l].fill(0.0)
+                    self.a[l].fill(0.0)
+                    self.z[l].fill(0.0)
                 
                 # Mini-batch loop
                 for i in range(batch_size):
@@ -202,11 +212,9 @@ class BackPropagation:
                         self.batch_a[l] += self.a[l] / batch_size
                                     
                 # Update the weights at the end of the mini-batch using gradient descent
-                self.backward(self.batch_a,y) # compute gradient with average network output
-                                              # of mini batch
                 for l in range(1,self.L):
-                    self.w[l] = self.w[l]-epsilon*self.dw[l]
-                    self.b[l] = self.b[l]-epsilon*self.db[l]
+                    self.w[l] = self.w[l]-epsilon*(self.dw[l]/ batch_size)
+                    self.b[l] = self.b[l]-epsilon*(self.db[l]/ batch_size)
                 
                 # Update logs
                 loss_log.append( batch_loss / batch_size )
