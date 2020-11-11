@@ -31,10 +31,16 @@ class BackPropagation:
     # input pixels), and 10 output units, one for each of the ten
     # classes.
 
-    def __init__(self,network_shape=[784,20,20,20,10]):
+    def __init__(self,network_shape=[784,20,20,20,10], normalize=False):
 
         # Read the training and test data using the provided utility functions
         self.trainX, self.trainY, self.testX, self.testY = fnn_utils.read_data()
+        # normalization
+        if normalize==True:
+            row_sums = self.trainX.sum(axis=1)
+            self.trainX = self.trainX/ row_sums[:, np.newaxis]
+            row_sums = self.testX.sum(axis=1)
+            self.testX = self.testX/ row_sums[:, np.newaxis]
 
         # Number of layers in the network
         self.L = len(network_shape)
@@ -74,17 +80,17 @@ class BackPropagation:
         return(self.a[self.L-1])
 
     def softmax(self, z):
-              
-        Q = np.sum(np.exp(z))
-        return np.exp(z)/Q
+        r = -np.max(z)
+        Q = np.sum(np.exp(z+r))
+        return np.exp(z+r)/Q
 
     def loss(self, pred, y):
-        
+        # pred is the output of the last layer (z^l_j) 
+        Q = np.sum(np.exp(pred))   
         # for 10 outputs
-        prob = self.softmax(pred)
         c = np.zeros(10)
         for i in range(10):
-            c[i] = -np.log(prob[i])
+            c[i] = np.log(Q)-pred[i]
         self.nabla_C_out = c
         return np.sum(c)/10
     
