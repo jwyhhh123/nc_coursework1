@@ -67,14 +67,14 @@ class BackPropagation:
         layer = 1
         while layer < self.L:
             self.z[layer] = np.dot(self.w[layer], self.a[i]) + self.b[layer]
-            self.z[layer] = self.z[layer]/np.max(abs(self.z[layer]))
+            #self.z[layer] = self.z[layer]/np.max(abs(self.z[layer]))
             self.a[layer] = self.phi(self.z[layer])
             i += 1
             layer += 1
 
-        # replace the last layer to softmax
-        
-        return self.softmax(self.z[self.L-1])
+        # replace last activation layer to be a softmax layer
+        self.a[self.L-1] = self.softmax(self.z[self.L-1])
+        return self.a[self.L-1]
 
     def softmax(self, z): # in this case z should be self.z(self.L-1)
         r = -np.max(z)
@@ -139,7 +139,7 @@ class BackPropagation:
     
     def sgd(self,
             batch_size=50,
-            epsilon=0.01,
+            epsilon=0.00007,
             epochs=1000):
 
         """ Mini-batch gradient descent on training data.
@@ -191,7 +191,7 @@ class BackPropagation:
                     y = self.trainY[permutation[k*batch_size+i]]
 
                     # Feed forward inputs
-                    self.a[self.L-1]=self.forward(x)
+                    self.forward(x)
                     
                     # Compute gradients
                     self.backward(x,y)
