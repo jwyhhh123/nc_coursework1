@@ -86,22 +86,24 @@ class BackPropagation:
 
     def loss(self, pred, y):
         # pred is the output of the last layer (z^l_j) 
-        Q = np.sum(np.exp(pred))   
+        r = -np.max(pred)
+        Q = np.sum(np.exp(pred+r))   
         # for 10 outputs
         c = np.zeros(10)
         for i in range(10):
-            c[i] = np.log(Q)-pred[i]
+            c[i] = np.log(Q)-(pred[i]+r)
         self.nabla_C_out = c
         return np.sum(c)/10
     
     def backward(self,x, y):
         """ Compute local gradients, then return gradients of network.
         """
+        # x is the output of the whole network
         
         # note that dz^l_j/dw^l_j = input of perivous layer which multiply that w (a^l-1_j)
         # dz^l_j/db^l_j always = 1, thus dc/db = dc/dz
         label = np.argmax(y)
-        prob = self.softmax(self.a[self.L-1])
+        prob = self.softmax(x[self.L-1])
         sigma = lambda a,b: 1 if a==b else 0 
         for i in range(self.L-1,0,-1): #loop layer
             for j in range(self.delta[i].shape[0]): #loop j th element
@@ -113,7 +115,7 @@ class BackPropagation:
                      #activation derivative(input of perivious layer)   
                 self.db[i][j]=np.sum(self.delta[i])#dc/db, = dc/dz
                 for k in range(self.dw[i].shape[1]): #loop j th element's k th input
-                    self.dw[i][j][k]=np.sum(self.delta[i]*self.a[i-1][k])#dc/dw, = dc/dz * a^l-1
+                    self.dw[i][j][k]=np.sum(self.delta[i]*x[i-1][k])#dc/dw, = dc/dz * a^l-1
         
 
     # Return predicted image class for input x
@@ -191,7 +193,7 @@ class BackPropagation:
                     
                     # Compute gradients
                     # TODO
-                    self.backward(x,y)
+                    self.backward(self.a,y)
 
                     # Update loss log
                     batch_loss += self.loss(self.a[self.L-1], y)
@@ -200,6 +202,8 @@ class BackPropagation:
                         self.batch_a[l] += self.a[l] / batch_size
                                     
                 # Update the weights at the end of the mini-batch using gradient descent
+                self.backward(self.batch_a,y) # compute gradient with average network output
+                                              # of mini batch
                 for l in range(1,self.L):
                     self.w[l] = self.w[l]-epsilon*self.dw[l]
                     self.b[l] = self.b[l]-epsilon*self.db[l]
