@@ -177,8 +177,6 @@ class BackPropagation:
                     self.db[l].fill(0.0)
                     self.delta[l].fill(0.0)
                     self.dw[l].fill(0.0)
-                    self.a[l].fill(0.0)
-                    self.z[l].fill(0.0)
                 
                 # Mini-batch loop
                 for i in range(batch_size):
