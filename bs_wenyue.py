@@ -35,6 +35,10 @@ class BackPropagation:
 
         # Read the training and test data using the provided utility functions
         self.trainX, self.trainY, self.testX, self.testY = fnn_utils.read_data()
+        
+        # Normalize x between 0 and 1
+        self.trainX = self.trainX/255
+        self.testX = self.testX/255
 
         # Number of layers in the network
         self.L = len(network_shape)
@@ -137,10 +141,16 @@ class BackPropagation:
         results = [(self.predict(x), np.argmax(y)) for (x,y) in zip(X[samples],Y[samples])]
         return sum(int(x==y) for (x,y) in results)/N
 
-    
+    '''
+    Batch size:
+      - 1 , converges quickly at the beginning, reach 0.8 acc, not changing afterwards. loss is not stable, high fluctuation.
+      - 50, converges slower than batch size 1, reach 0.7 acc quickly, tending to increase acc. loss fluctuated, not quite stable.
+      - 500,converges slowly, reaching a higher acc takes more time, tending to increase acc. loss decreases with smaller fluctuation.
+      - 784,
+    '''
     def sgd(self,
-            batch_size=50,
-            epsilon=0.00007,
+            batch_size=500,
+            epsilon=0.01,
             epochs=1000):
 
         """ Mini-batch gradient descent on training data.
