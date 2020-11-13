@@ -40,7 +40,7 @@ class BackPropagation:
     # input pixels), and 10 output units, one for each of the ten
     # classes.
 
-    def __init__(self,network_shape=[784,20,20,20,10], normalize=False):
+    def __init__(self,network_shape=[784,20,20,20,10], normalize=False, use_weight=True):
 
         # Read the training and test data using the provided utility functions
         self.trainX, self.trainY, self.testX, self.testY = fnn_utils.read_data()
@@ -75,9 +75,10 @@ class BackPropagation:
         # Store activations over the batch for plotting
         self.batch_a       = [np.zeros(m) for m in network_shape]
 
-        with open('weight.npy', 'rb') as f:
-            self.w = np.load(f, allow_pickle = True, encoding='bytes')
-            self.b = np.load(f, allow_pickle = True, encoding='bytes')
+        if use_weight==True:
+            with open('weight.npy', 'rb') as f:
+                self.w = np.load(f, allow_pickle = True, encoding='bytes')
+                self.b = np.load(f, allow_pickle = True, encoding='bytes')
                 
     def forward(self, x):
         """ Set first activation in input layer equal to the input vector x (a 24x24 picture), 
@@ -106,6 +107,24 @@ class BackPropagation:
         p = self.softmax(pred)
         p = -np.log(p)
         return p[np.argmax(y)]
+
+    def loss2(self, pred, y):
+        # pred is the output of the last layer (z^l_j) 
+        p = self.softmax(pred)
+        p = -np.log(p)
+        return np.sum(p)/10
+
+    def loss3(self, pred, y):
+        # pred is the output of the last layer (z^l_j) 
+        r = -np.max(pred)
+        pred = pred+r
+        Q = np.sum(np.exp(pred))   
+        # for 10 outputs
+        c = np.zeros(10)
+        c = np.log(Q)-pred
+        self.nabla_C_out = c
+        return np.sum(c)/10
+
     
     def backward(self,x, y):
         """ Compute local gradients, then return gradients of network.
@@ -115,8 +134,7 @@ class BackPropagation:
         # note that dz^l_j/dw^l_j = input of perivous layer which multiply that w (a^l-1_j)
         # dz^l_j/db^l_j always = 1, thus dc/db = dc/dz
         prob = self.softmax(self.a[self.L-1])
-        sigma = lambda a,b: 1 if a==b else 0 
-        sigma = np.vectorize(sigma)
+
         for i in range(self.L-1,0,-1): #loop layer
                 if i==self.L-1:# output layer
                     self.delta[i] = prob-y #dc/dz     
@@ -125,8 +143,7 @@ class BackPropagation:
                     #dc/dz,= next's layer's local grad*w to this layer*
                      #activation derivative(input of perivious layer)   
                 self.db[i]+=self.delta[i]#dc/db, = dc/dz
-                for k in range(self.dw[i].shape[0]): #loop j th element's k th input
-                    self.dw[i][k]+=np.dot(self.delta[i][k],self.a[i-1])#dc/dw, = dc/dz * a^l-1
+                self.dw[i]+=np.outer(self.delta[i],self.a[i-1])#dc/dw, = dc/dz * a^l-1
         
 
     # Return predicted image class for input x
@@ -210,7 +227,7 @@ class BackPropagation:
                     self.backward(self.a,y)
 
                     # Update loss log
-                    batch_loss += self.loss(self.a[self.L-1], y)
+                    batch_loss += self.loss2(self.a[self.L-1], y)
 
                     for l in range(self.L):
                         self.batch_a[l] += self.a[l] / batch_size
@@ -252,7 +269,7 @@ class BackPropagation:
 
 def main():
     
-    bp = BackPropagation(normalize=True)
+    bp = BackPropagation(normalize=True, use_weight=False)
     bp.sgd()
 
 
