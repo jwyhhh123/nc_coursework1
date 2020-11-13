@@ -7,6 +7,7 @@
 import numpy as np
 import time
 import fnn_utils
+import copy
 
 # Some activation functions with derivatives.
 # Choose which one to use by updating the variable phi in the code below.
@@ -18,7 +19,7 @@ def sigmoid_d(x):
 def relu(x):
     return np.maximum(0,x)
 def relu_d(x):
-    r = x
+    r = copy.deepcopy(x)
     r[r<=0]=0
     r[r>0]=1
     return r
