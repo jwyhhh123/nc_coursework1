@@ -89,11 +89,11 @@ class BackPropagation:
         # note that a[0] is the input to the network
         # z[0],w[0],b[0] is meaningless as we compute the input(a[0]) from data
         for i in range(self.L-1):
-            
-            
-
             self.z[i+1] = np.dot(self.w[i+1],self.a[i],)+self.b[i+1]
-            self.a[i+1] = self.phi(self.z[i+1])
+            if i==self.L-2:# output layer
+                self.a[i+1] = self.softmax(self.z[i+1])
+            else:
+                self.a[i+1] = self.phi(self.z[i+1])
         
         return(self.a[self.L-1])
 
@@ -102,29 +102,24 @@ class BackPropagation:
         Q = np.sum(np.exp(z+r))
         return np.exp(z+r)/Q
 
-    def loss(self, pred, y):
-        # pred is the output of the last layer (z^l_j) 
-        p = self.softmax(pred)
-        p = -np.log(p)
-        return p[np.argmax(y)]
-
     def loss2(self, pred, y):
-        # pred is the output of the last layer (z^l_j) 
-        p = self.softmax(pred)
-        p = -np.log(p)
-        return np.sum(p)/10
-
-    def loss3(self, pred, y):
-        # pred is the output of the last layer (z^l_j) 
-        r = -np.max(pred)
-        pred = pred+r
-        Q = np.sum(np.exp(pred))   
+        # pred is the output of the last layer (z^l_j)
+        z = self.z[-1]
+        r = -np.max(z)
+        Q = np.sum(np.exp(z+r))         
         # for 10 outputs
         c = np.zeros(10)
-        c = np.log(Q)-pred
+        c = np.log(Q)-(z+r)
         self.nabla_C_out = c
         return np.sum(c)/10
 
+    def loss(self, pred, y):
+        # pred is the output of the last layer (z^l_j)
+        z = self.z[-1]
+        r = -np.max(z)
+        Q = np.sum(np.exp(z+r))         
+        label = np.argmax(y)
+        return np.log(Q)-(z[label]+r)
     
     def backward(self,x, y):
         """ Compute local gradients, then return gradients of network.
@@ -133,11 +128,10 @@ class BackPropagation:
         
         # note that dz^l_j/dw^l_j = input of perivous layer which multiply that w (a^l-1_j)
         # dz^l_j/db^l_j always = 1, thus dc/db = dc/dz
-        prob = self.softmax(self.a[self.L-1])
 
         for i in range(self.L-1,0,-1): #loop layer
                 if i==self.L-1:# output layer
-                    self.delta[i] = prob-y #dc/dz     
+                    self.delta[i] = self.a[self.L-1]-y #dc/dz     
                 else: # normal layer
                     self.delta[i] = self.phi_d(self.z[i])*np.dot((self.w[i+1].T),self.delta[i+1])
                     #dc/dz,= next's layer's local grad*w to this layer*
@@ -148,11 +142,11 @@ class BackPropagation:
 
     # Return predicted image class for input x
     def predict(self, x): 
-        return np.argmax(self.softmax(self.forward(x)))
+        return np.argmax(self.forward(x))
 
     # Return predicted percentage for class j
     def predict_pct(self, j):
-        return self.softmax(self.a[self.L-1])[j]
+        return self.a[self.L-1][j]
     
     def evaluate(self, X, Y, N):
         """ Evaluate the network on a random subset of size N. """
@@ -227,7 +221,7 @@ class BackPropagation:
                     self.backward(self.a,y)
 
                     # Update loss log
-                    batch_loss += self.loss2(self.a[self.L-1], y)
+                    batch_loss += self.loss(self.a[self.L-1], y)
 
                     for l in range(self.L):
                         self.batch_a[l] += self.a[l] / batch_size
