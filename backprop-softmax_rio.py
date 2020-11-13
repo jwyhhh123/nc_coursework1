@@ -7,6 +7,7 @@
 import numpy as np
 import time
 import fnn_utils
+import sys
 
 # Some activation functions with derivatives.
 # Choose which one to use by updating the variable phi in the code below.
@@ -24,7 +25,7 @@ def relu_d(x):
     vfunc = np.vectorize(squarer)
     return vfunc(x)
 def leaky_relu(x):
-    squarer = lambda x: max(0.01x, x)
+    squarer = lambda x: max(0.01*x, x)
     vfunc = np.vectorize(squarer)
     return vfunc(x)
 def leaky_relu_d(x):
@@ -44,11 +45,13 @@ class BackPropagation:
         # Read the training and test data using the provided utility functions
         self.trainX, self.trainY, self.testX, self.testY = fnn_utils.read_data()
         # normalization
-        if normalize==True:
-            row_sums = self.trainX.sum(axis=1)
-            self.trainX = self.trainX/ row_sums[:, np.newaxis]
-            row_sums = self.testX.sum(axis=1)
-            self.testX = self.testX/ row_sums[:, np.newaxis]
+        if normalize==True: # max-min normalization to make input in range [0,1]
+            min_array = self.trainX.min(axis=1)[:, np.newaxis]
+            max_array = self.trainX.max(axis=1)[:, np.newaxis]
+            self.trainX = (self.trainX - min_array)/(max_array-min_array)
+            min_array = self.testX.min(axis=1)[:, np.newaxis]
+            max_array = self.testX.max(axis=1)[:, np.newaxis]
+            self.testX = (self.testX - min_array)/(max_array-min_array)
 
         # Number of layers in the network
         self.L = len(network_shape)
@@ -71,6 +74,10 @@ class BackPropagation:
         
         # Store activations over the batch for plotting
         self.batch_a       = [np.zeros(m) for m in network_shape]
+
+        with open('weight.npy', 'rb') as f:
+            self.w = np.load(f, allow_pickle = True, encoding='bytes')
+            self.b = np.load(f, allow_pickle = True, encoding='bytes')
                 
     def forward(self, x):
         """ Set first activation in input layer equal to the input vector x (a 24x24 picture), 
@@ -81,8 +88,10 @@ class BackPropagation:
         # note that a[0] is the input to the network
         # z[0],w[0],b[0] is meaningless as we compute the input(a[0]) from data
         for i in range(self.L-1):
-            for j in range(self.z[i+1].shape[0]):
-                self.z[i+1][j] = np.sum(self.a[i]*self.w[i+1][j])+self.b[i+1][j]
+            
+            
+
+            self.z[i+1] = np.dot(self.w[i+1],self.a[i],)+self.b[i+1]
             self.a[i+1] = self.phi(self.z[i+1])
         
         return(self.a[self.L-1])
@@ -94,14 +103,9 @@ class BackPropagation:
 
     def loss(self, pred, y):
         # pred is the output of the last layer (z^l_j) 
-        r = -np.max(pred)
-        Q = np.sum(np.exp(pred+r))   
-        # for 10 outputs
-        c = np.zeros(10)
-        for i in range(10):
-            c[i] = np.log(Q)-(pred[i]+r)
-        self.nabla_C_out = c
-        return np.sum(c)/10
+        p = self.softmax(pred)
+        p = -np.log(p)
+        return p[np.argmax(y)]
     
     def backward(self,x, y):
         """ Compute local gradients, then return gradients of network.
@@ -110,20 +114,19 @@ class BackPropagation:
         
         # note that dz^l_j/dw^l_j = input of perivous layer which multiply that w (a^l-1_j)
         # dz^l_j/db^l_j always = 1, thus dc/db = dc/dz
-        label = np.argmax(y)
         prob = self.softmax(self.a[self.L-1])
         sigma = lambda a,b: 1 if a==b else 0 
+        sigma = np.vectorize(sigma)
         for i in range(self.L-1,0,-1): #loop layer
-            for j in range(self.delta[i].shape[0]): #loop j th element
                 if i==self.L-1:# output layer
-                    self.delta[i][j] = prob[j]-sigma(j,label) #dc/dz     
+                    self.delta[i] = prob-y #dc/dz     
                 else: # normal layer
-                    self.delta[i][j] = np.sum(self.phi_d(self.z[i])*((self.w[i+1].T)*self.delta[i+1]).T)
+                    self.delta[i] = self.phi_d(self.z[i])*np.dot((self.w[i+1].T),self.delta[i+1])
                     #dc/dz,= next's layer's local grad*w to this layer*
                      #activation derivative(input of perivious layer)   
-                self.db[i][j]+=np.sum(self.delta[i])#dc/db, = dc/dz
-                for k in range(self.dw[i].shape[1]): #loop j th element's k th input
-                    self.dw[i][j][k]+=np.sum(self.delta[i]*self.a[i-1][k])#dc/dw, = dc/dz * a^l-1
+                self.db[i]+=self.delta[i]#dc/db, = dc/dz
+                for k in range(self.dw[i].shape[0]): #loop j th element's k th input
+                    self.dw[i][k]+=np.dot(self.delta[i][k],self.a[i-1])#dc/dw, = dc/dz * a^l-1
         
 
     # Return predicted image class for input x
@@ -144,8 +147,8 @@ class BackPropagation:
     
     def sgd(self,
             batch_size=50,
-            epsilon=0.0001,
-            epochs=5):
+            epsilon=0.001,
+            epochs=1000):
 
         """ Mini-batch gradient descent on training data.
 
@@ -170,6 +173,7 @@ class BackPropagation:
         
         # In each "epoch", the network is exposed to the entire training set.
         for t in range(epochs):
+            print("epoch:"+str(t))
 
             # We will order the training data using a random permutation.
             permutation = np.random.permutation(N)
@@ -215,6 +219,10 @@ class BackPropagation:
                 for l in range(1,self.L):
                     self.w[l] = self.w[l]-epsilon*(self.dw[l]/ batch_size)
                     self.b[l] = self.b[l]-epsilon*(self.db[l]/ batch_size)
+
+                with open('weight.npy', 'wb') as f:
+                    np.save(f, self.w)
+                    np.save(f, self.b)
                 
                 # Update logs
                 loss_log.append( batch_loss / batch_size )
@@ -243,8 +251,10 @@ class BackPropagation:
 # Start training with default parameters.
 
 def main():
-    bp = BackPropagation()
+    
+    bp = BackPropagation(normalize=True)
     bp.sgd()
+
 
 if __name__ == "__main__":
     main()
