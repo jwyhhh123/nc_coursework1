@@ -32,7 +32,12 @@ def leaky_relu_d(x):
     squarer = lambda x: 1 if x>0 else 0.01
     vfunc = np.vectorize(squarer)
     return vfunc(x)
-       
+
+tanh = np.tanh
+
+def tanh_d(z):
+    return 1-(np.tanh(z))**2
+
 class BackPropagation:
 
     # The network shape list describes the number of units in each
@@ -69,8 +74,8 @@ class BackPropagation:
         self.nabla_C_out   = np.zeros(network_shape[-1])
 
         # Choose activation function
-        self.phi           = leaky_relu
-        self.phi_d         = leaky_relu_d
+        self.phi           = tanh
+        self.phi_d         = tanh_d
         
         # Store activations over the batch for plotting
         self.batch_a       = [np.zeros(m) for m in network_shape]
@@ -157,9 +162,9 @@ class BackPropagation:
 
     
     def sgd(self,
-            batch_size=50,
-            epsilon=0.001,
-            epochs=1000):
+            batch_size=300,
+            epsilon=0.01,
+            epochs=50):
 
         """ Mini-batch gradient descent on training data.
 
@@ -263,8 +268,11 @@ class BackPropagation:
 
 def main():
     
-    bp = BackPropagation(normalize=True, use_weight=False)
-    bp.sgd()
+    bp = BackPropagation(normalize=True,use_weight=False)
+    bp.sgd(batch_size=300,
+            epsilon=0.01,
+            epochs=50)
+    x = input()
 
 
 if __name__ == "__main__":
