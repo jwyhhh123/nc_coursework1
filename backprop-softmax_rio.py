@@ -107,24 +107,8 @@ class BackPropagation:
         Q = np.sum(np.exp(z+r))
         return np.exp(z+r)/Q
 
-    def loss2(self, pred, y):
-        # pred is the output of the last layer (z^l_j)
-        z = self.z[-1]
-        r = -np.max(z)
-        Q = np.sum(np.exp(z+r))         
-        # for 10 outputs
-        c = np.zeros(10)
-        c = np.log(Q)-(z+r)
-        self.nabla_C_out = c
-        return np.sum(c)/10
-
-    def loss(self, pred, y):
-        # pred is the output of the last layer (z^l_j)
-        z = self.z[-1]
-        r = -np.max(z)
-        Q = np.sum(np.exp(z+r))         
-        label = np.argmax(y)
-        return np.log(Q)-(z[label]+r)
+    def loss(self, pred, y): # loss for a single (x,y)
+        return -np.log(pred[np.argmax(y)])
     
     def backward(self,x, y):
         """ Compute local gradients, then return gradients of network.
@@ -159,6 +143,11 @@ class BackPropagation:
         samples = np.random.randint(num_data,size=N)
         results = [(self.predict(x), np.argmax(y)) for (x,y) in zip(X[samples],Y[samples])]
         return sum(int(x==y) for (x,y) in results)/N
+
+    def evaluate_whole(self, X, Y):
+        """ Evaluate the network with whole test set """
+        results = [(self.predict(x), np.argmax(y)) for (x,y) in zip(X,Y)]
+        return sum(int(x==y) for (x,y) in results)/10000
 
     
     def sgd(self,
@@ -273,6 +262,7 @@ def main():
             epsilon=0.01,
             epochs=50)
     x = input()
+    print(bp.evaluate_whole(bp.testX, bp.testY))
 
 
 if __name__ == "__main__":
