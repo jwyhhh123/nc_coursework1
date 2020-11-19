@@ -267,7 +267,7 @@ def main():
     bp.sgd(batch_size=300,
             epsilon=0.01,
             epochs=50)
-    x = input()
+    #x = input()
     print(bp.evaluate_whole(bp.testX, bp.testY))
 
 
