@@ -45,7 +45,7 @@ class BackPropagation:
     # input pixels), and 10 output units, one for each of the ten
     # classes.
 
-    def __init__(self,network_shape=[784,20,20,20,10], normalize=False, use_weight=True):
+    def __init__(self,network_shape=[784,20,20,20,10], normalize=False, use_weight=True, save_weight=False):
 
         # Read the training and test data using the provided utility functions
         self.trainX, self.trainY, self.testX, self.testY = fnn_utils.read_data()
@@ -80,10 +80,14 @@ class BackPropagation:
         # Store activations over the batch for plotting
         self.batch_a       = [np.zeros(m) for m in network_shape]
 
+        # use saved model weight
         if use_weight==True:
             with open('weight.npy', 'rb') as f:
                 self.w = np.load(f, allow_pickle = True, encoding='bytes')
                 self.b = np.load(f, allow_pickle = True, encoding='bytes')
+
+        # flag to design if save the model weight
+        self.save_weight = save_weight
                 
     def forward(self, x):
         """ Set first activation in input layer equal to the input vector x (a 24x24 picture), 
@@ -125,6 +129,7 @@ class BackPropagation:
                     self.delta[i] = self.phi_d(self.z[i])*np.dot((self.w[i+1].T),self.delta[i+1])
                     #dc/dz,= next's layer's local grad*w to this layer*
                      #activation derivative(input of perivious layer)   
+                # sum up the weight in a batch
                 self.db[i]+=self.delta[i]#dc/db, = dc/dz
                 self.dw[i]+=np.outer(self.delta[i],self.a[i-1])#dc/dw, = dc/dz * a^l-1
         
@@ -225,9 +230,10 @@ class BackPropagation:
                     self.w[l] = self.w[l]-epsilon*(self.dw[l]/ batch_size)
                     self.b[l] = self.b[l]-epsilon*(self.db[l]/ batch_size)
 
-                with open('weight.npy', 'wb') as f:
-                    np.save(f, self.w)
-                    np.save(f, self.b)
+                if self.save_weight==True:
+                    with open('weight.npy', 'wb') as f:
+                        np.save(f, self.w)
+                        np.save(f, self.b)
                 
                 # Update logs
                 loss_log.append( batch_loss / batch_size )
@@ -257,7 +263,7 @@ class BackPropagation:
 
 def main():
     
-    bp = BackPropagation(normalize=True,use_weight=False)
+    bp = BackPropagation(normalize=True,use_weight=False, save_weight=False)
     bp.sgd(batch_size=300,
             epsilon=0.01,
             epochs=50)
