@@ -2,6 +2,7 @@
 # Neural Computation (Extended)
 # CW1: Backpropagation and Softmax
 # Autumn 2020
+# Group 13
 #
 
 import numpy as np
@@ -183,7 +184,7 @@ class BackPropagation:
         
         # In each "epoch", the network is exposed to the entire training set.
         for t in range(epochs):
-            print("epoch:"+str(t))
+            #print("epoch:"+str(t))
 
             # We will order the training data using a random permutation.
             permutation = np.random.permutation(N)
@@ -268,7 +269,7 @@ def main():
             epsilon=0.01,
             epochs=50)
     #x = input()
-    print(bp.evaluate_whole(bp.testX, bp.testY))
+    #print(bp.evaluate_whole(bp.testX, bp.testY))
 
 
 if __name__ == "__main__":
