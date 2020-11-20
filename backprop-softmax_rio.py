@@ -9,26 +9,31 @@ import numpy as np
 import time
 import fnn_utils
 import sys
+import copy
 
 # Some activation functions with derivatives.
 # Choose which one to use by updating the variable phi in the code below.
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
 def sigmoid_d(x):
     return sigmoid(x)*(1-sigmoid(x))
+
 def relu(x):
-    squarer = lambda x: max(0.0, x)
-    vfunc = np.vectorize(squarer)
-    return vfunc(x)
+    return np.maximum(0,x)
+
 def relu_d(x):
-    squarer = lambda x: 1 if x>0 else 0
-    vfunc = np.vectorize(squarer)
-    return vfunc(x)
+    r = copy.deepcopy(x)
+    r[r<=0]=0
+    r[r>0]=1
+    return r
+
 def leaky_relu(x):
     squarer = lambda x: max(0.01*x, x)
     vfunc = np.vectorize(squarer)
     return vfunc(x)
+
 def leaky_relu_d(x):
     squarer = lambda x: 1 if x>0 else 0.01
     vfunc = np.vectorize(squarer)
@@ -265,11 +270,11 @@ class BackPropagation:
 def main():
     
     bp = BackPropagation(normalize=True,use_weight=False, save_weight=False)
-    bp.sgd(batch_size=300,
+    bp.sgd(batch_size=50,
             epsilon=0.01,
             epochs=50)
     #x = input()
-    #print(bp.evaluate_whole(bp.testX, bp.testY))
+    print(bp.evaluate_whole(bp.testX, bp.testY))
 
 
 if __name__ == "__main__":
